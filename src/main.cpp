@@ -6,7 +6,7 @@
 #include "BluetoothSerial.h"
 
 long sleepTime = 0;
-const int wakeup_sec = 10; // wake up after 10 seconds
+const int wakeup_sec = 360; // wake up after 10 seconds
 
 // ============================= wakeup reason
 enum WakeupStatus
@@ -19,11 +19,15 @@ enum WakeupStatus
   WAKEUP_BUTTON1,
   WAKEUP_BUTTON2
 };
+
 WakeupStatus operation = WakeupStatus::WAKEUP_POWER;
 
 // Buttons to wake up controller used in function wakeup reason.
 #define BUTTON_PIN1 12
 #define BUTTON_PIN2 14
+
+void check_wake_up();
+void goSleep();
 
 // ============================= wakeup reason end
 
@@ -53,24 +57,28 @@ void loop()
 void goSleep()
 {
 
-  esp_wifi_stop();
-  // WiFi.disconnect();
-  // WiFi.mode(WIFI_OFF);
+  pinMode(GPIO_NUM_15, INPUT);
+  pinMode(GPIO_NUM_12, INPUT);
+  pinMode(GPIO_NUM_14, INPUT);
 
-  //  esp_bluedroid_disable();
+  // disable WiFi and Bluetooth
+  esp_wifi_stop();
   esp_bt_controller_disable();
   BluetoothSerial SerialBT;
   SerialBT.end();
 
   // Isolate RTC GPIO, to prevent leaks and power consumption
   // (example for GPIO_NUM_15, GPIO_NUM_12, GPIO_NUM_14, in case you not use them to wakeup)
-  rtc_gpio_isolate(GPIO_NUM_15);
-  rtc_gpio_isolate(GPIO_NUM_12);
-  rtc_gpio_isolate(GPIO_NUM_14);
+  // rtc_gpio_isolate(GPIO_NUM_15);
+  // rtc_gpio_isolate(GPIO_NUM_12);
+  // rtc_gpio_isolate(GPIO_NUM_14);
 
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF); // ИЗМЕНЕНО: теперь AUTO
+  rtc_gpio_isolate(GPIO_NUM_33);
+
+  // disable RTC peripherals, fast and slow memory, XTAL
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF); // Если используете RTC_DATA_ATTR, оставьте ON
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
 
   // enable timer to wake up the controller
